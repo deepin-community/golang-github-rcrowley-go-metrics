@@ -1,0 +1,381 @@
+From 9fc3666d96505e0804ab7f5229d96c8ef6106f9e Mon Sep 17 00:00:00 2001
+From: lrita <lrita@163.com>
+Date: Tue, 30 Jul 2019 20:07:58 +0800
+Subject: [PATCH] optimize the SampleXXX function and fixes #249
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+NB: I've stripped out the optimizations as they are not merged upstream. I did,
+however, keep in the parts that fix the bitwise float comparison numerics. The
+test-code now does a delta test instead which should work more reliably.
+
+--- a/ewma_test.go
++++ b/ewma_test.go
+@@ -15,67 +15,67 @@
+ 	a := NewEWMA1()
+ 	a.Update(3)
+ 	a.Tick()
+-	if rate := a.Rate(); 0.6 != rate {
++	if rate := a.Rate(); float64NotEqual(0.6, rate) {
+ 		t.Errorf("initial a.Rate(): 0.6 != %v\n", rate)
+ 	}
+ 	elapseMinute(a)
+-	if rate := a.Rate(); 0.22072766470286553 != rate {
++	if rate := a.Rate(); float64NotEqual(0.22072766470286553, rate) {
+ 		t.Errorf("1 minute a.Rate(): 0.22072766470286553 != %v\n", rate)
+ 	}
+ 	elapseMinute(a)
+-	if rate := a.Rate(); 0.08120116994196772 != rate {
++	if rate := a.Rate(); float64NotEqual(0.08120116994196772, rate) {
+ 		t.Errorf("2 minute a.Rate(): 0.08120116994196772 != %v\n", rate)
+ 	}
+ 	elapseMinute(a)
+-	if rate := a.Rate(); 0.029872241020718428 != rate {
++	if rate := a.Rate(); float64NotEqual(0.029872241020718428, rate) {
+ 		t.Errorf("3 minute a.Rate(): 0.029872241020718428 != %v\n", rate)
+ 	}
+ 	elapseMinute(a)
+-	if rate := a.Rate(); 0.01098938333324054 != rate {
++	if rate := a.Rate(); float64NotEqual(0.01098938333324054, rate) {
+ 		t.Errorf("4 minute a.Rate(): 0.01098938333324054 != %v\n", rate)
+ 	}
+ 	elapseMinute(a)
+-	if rate := a.Rate(); 0.004042768199451294 != rate {
++	if rate := a.Rate(); float64NotEqual(0.004042768199451294, rate) {
+ 		t.Errorf("5 minute a.Rate(): 0.004042768199451294 != %v\n", rate)
+ 	}
+ 	elapseMinute(a)
+-	if rate := a.Rate(); 0.0014872513059998212 != rate {
++	if rate := a.Rate(); float64NotEqual(0.0014872513059998212, rate) {
+ 		t.Errorf("6 minute a.Rate(): 0.0014872513059998212 != %v\n", rate)
+ 	}
+ 	elapseMinute(a)
+-	if rate := a.Rate(); 0.0005471291793327122 != rate {
++	if rate := a.Rate(); float64NotEqual(0.0005471291793327122, rate) {
+ 		t.Errorf("7 minute a.Rate(): 0.0005471291793327122 != %v\n", rate)
+ 	}
+ 	elapseMinute(a)
+-	if rate := a.Rate(); 0.00020127757674150815 != rate {
++	if rate := a.Rate(); float64NotEqual(0.00020127757674150815, rate) {
+ 		t.Errorf("8 minute a.Rate(): 0.00020127757674150815 != %v\n", rate)
+ 	}
+ 	elapseMinute(a)
+-	if rate := a.Rate(); 7.404588245200814e-05 != rate {
++	if rate := a.Rate(); float64NotEqual(7.404588245200814e-05, rate) {
+ 		t.Errorf("9 minute a.Rate(): 7.404588245200814e-05 != %v\n", rate)
+ 	}
+ 	elapseMinute(a)
+-	if rate := a.Rate(); 2.7239957857491083e-05 != rate {
++	if rate := a.Rate(); float64NotEqual(2.7239957857491083e-05, rate) {
+ 		t.Errorf("10 minute a.Rate(): 2.7239957857491083e-05 != %v\n", rate)
+ 	}
+ 	elapseMinute(a)
+-	if rate := a.Rate(); 1.0021020474147462e-05 != rate {
++	if rate := a.Rate(); float64NotEqual(1.0021020474147462e-05, rate) {
+ 		t.Errorf("11 minute a.Rate(): 1.0021020474147462e-05 != %v\n", rate)
+ 	}
+ 	elapseMinute(a)
+-	if rate := a.Rate(); 3.6865274119969525e-06 != rate {
++	if rate := a.Rate(); float64NotEqual(3.6865274119969525e-06, rate) {
+ 		t.Errorf("12 minute a.Rate(): 3.6865274119969525e-06 != %v\n", rate)
+ 	}
+ 	elapseMinute(a)
+-	if rate := a.Rate(); 1.3561976441886433e-06 != rate {
++	if rate := a.Rate(); float64NotEqual(1.3561976441886433e-06, rate) {
+ 		t.Errorf("13 minute a.Rate(): 1.3561976441886433e-06 != %v\n", rate)
+ 	}
+ 	elapseMinute(a)
+-	if rate := a.Rate(); 4.989172314621449e-07 != rate {
++	if rate := a.Rate(); float64NotEqual(4.989172314621449e-07, rate) {
+ 		t.Errorf("14 minute a.Rate(): 4.989172314621449e-07 != %v\n", rate)
+ 	}
+ 	elapseMinute(a)
+-	if rate := a.Rate(); 1.8354139230109722e-07 != rate {
++	if rate := a.Rate(); float64NotEqual(1.8354139230109722e-07, rate) {
+ 		t.Errorf("15 minute a.Rate(): 1.8354139230109722e-07 != %v\n", rate)
+ 	}
+ }
+@@ -84,67 +84,67 @@
+ 	a := NewEWMA5()
+ 	a.Update(3)
+ 	a.Tick()
+-	if rate := a.Rate(); 0.6 != rate {
++	if rate := a.Rate(); float64NotEqual(0.6, rate) {
+ 		t.Errorf("initial a.Rate(): 0.6 != %v\n", rate)
+ 	}
+ 	elapseMinute(a)
+-	if rate := a.Rate(); 0.49123845184678905 != rate {
++	if rate := a.Rate(); float64NotEqual(0.49123845184678905, rate) {
+ 		t.Errorf("1 minute a.Rate(): 0.49123845184678905 != %v\n", rate)
+ 	}
+ 	elapseMinute(a)
+-	if rate := a.Rate(); 0.4021920276213837 != rate {
++	if rate := a.Rate(); float64NotEqual(0.4021920276213837, rate) {
+ 		t.Errorf("2 minute a.Rate(): 0.4021920276213837 != %v\n", rate)
+ 	}
+ 	elapseMinute(a)
+-	if rate := a.Rate(); 0.32928698165641596 != rate {
++	if rate := a.Rate(); float64NotEqual(0.32928698165641596, rate) {
+ 		t.Errorf("3 minute a.Rate(): 0.32928698165641596 != %v\n", rate)
+ 	}
+ 	elapseMinute(a)
+-	if rate := a.Rate(); 0.269597378470333 != rate {
++	if rate := a.Rate(); float64NotEqual(0.269597378470333, rate) {
+ 		t.Errorf("4 minute a.Rate(): 0.269597378470333 != %v\n", rate)
+ 	}
+ 	elapseMinute(a)
+-	if rate := a.Rate(); 0.2207276647028654 != rate {
++	if rate := a.Rate(); float64NotEqual(0.2207276647028654, rate) {
+ 		t.Errorf("5 minute a.Rate(): 0.2207276647028654 != %v\n", rate)
+ 	}
+ 	elapseMinute(a)
+-	if rate := a.Rate(); 0.18071652714732128 != rate {
++	if rate := a.Rate(); float64NotEqual(0.18071652714732128, rate) {
+ 		t.Errorf("6 minute a.Rate(): 0.18071652714732128 != %v\n", rate)
+ 	}
+ 	elapseMinute(a)
+-	if rate := a.Rate(); 0.14795817836496392 != rate {
++	if rate := a.Rate(); float64NotEqual(0.14795817836496392, rate) {
+ 		t.Errorf("7 minute a.Rate(): 0.14795817836496392 != %v\n", rate)
+ 	}
+ 	elapseMinute(a)
+-	if rate := a.Rate(); 0.12113791079679326 != rate {
++	if rate := a.Rate(); float64NotEqual(0.12113791079679326, rate) {
+ 		t.Errorf("8 minute a.Rate(): 0.12113791079679326 != %v\n", rate)
+ 	}
+ 	elapseMinute(a)
+-	if rate := a.Rate(); 0.09917933293295193 != rate {
++	if rate := a.Rate(); float64NotEqual(0.09917933293295193, rate) {
+ 		t.Errorf("9 minute a.Rate(): 0.09917933293295193 != %v\n", rate)
+ 	}
+ 	elapseMinute(a)
+-	if rate := a.Rate(); 0.08120116994196763 != rate {
++	if rate := a.Rate(); float64NotEqual(0.08120116994196763, rate) {
+ 		t.Errorf("10 minute a.Rate(): 0.08120116994196763 != %v\n", rate)
+ 	}
+ 	elapseMinute(a)
+-	if rate := a.Rate(); 0.06648189501740036 != rate {
++	if rate := a.Rate(); float64NotEqual(0.06648189501740036, rate) {
+ 		t.Errorf("11 minute a.Rate(): 0.06648189501740036 != %v\n", rate)
+ 	}
+ 	elapseMinute(a)
+-	if rate := a.Rate(); 0.05443077197364752 != rate {
++	if rate := a.Rate(); float64NotEqual(0.05443077197364752, rate) {
+ 		t.Errorf("12 minute a.Rate(): 0.05443077197364752 != %v\n", rate)
+ 	}
+ 	elapseMinute(a)
+-	if rate := a.Rate(); 0.04456414692860035 != rate {
++	if rate := a.Rate(); float64NotEqual(0.04456414692860035, rate) {
+ 		t.Errorf("13 minute a.Rate(): 0.04456414692860035 != %v\n", rate)
+ 	}
+ 	elapseMinute(a)
+-	if rate := a.Rate(); 0.03648603757513079 != rate {
++	if rate := a.Rate(); float64NotEqual(0.03648603757513079, rate) {
+ 		t.Errorf("14 minute a.Rate(): 0.03648603757513079 != %v\n", rate)
+ 	}
+ 	elapseMinute(a)
+-	if rate := a.Rate(); 0.0298722410207183831020718428 != rate {
++	if rate := a.Rate(); float64NotEqual(0.0298722410207183831020718428, rate) {
+ 		t.Errorf("15 minute a.Rate(): 0.0298722410207183831020718428 != %v\n", rate)
+ 	}
+ }
+@@ -153,67 +153,67 @@
+ 	a := NewEWMA15()
+ 	a.Update(3)
+ 	a.Tick()
+-	if rate := a.Rate(); 0.6 != rate {
++	if rate := a.Rate(); float64NotEqual(0.6, rate) {
+ 		t.Errorf("initial a.Rate(): 0.6 != %v\n", rate)
+ 	}
+ 	elapseMinute(a)
+-	if rate := a.Rate(); 0.5613041910189706 != rate {
++	if rate := a.Rate(); float64NotEqual(0.5613041910189706, rate) {
+ 		t.Errorf("1 minute a.Rate(): 0.5613041910189706 != %v\n", rate)
+ 	}
+ 	elapseMinute(a)
+-	if rate := a.Rate(); 0.5251039914257684 != rate {
++	if rate := a.Rate(); float64NotEqual(0.5251039914257684, rate) {
+ 		t.Errorf("2 minute a.Rate(): 0.5251039914257684 != %v\n", rate)
+ 	}
+ 	elapseMinute(a)
+-	if rate := a.Rate(); 0.4912384518467888184678905 != rate {
++	if rate := a.Rate(); float64NotEqual(0.4912384518467888184678905, rate) {
+ 		t.Errorf("3 minute a.Rate(): 0.4912384518467888184678905 != %v\n", rate)
+ 	}
+ 	elapseMinute(a)
+-	if rate := a.Rate(); 0.459557003018789 != rate {
++	if rate := a.Rate(); float64NotEqual(0.459557003018789, rate) {
+ 		t.Errorf("4 minute a.Rate(): 0.459557003018789 != %v\n", rate)
+ 	}
+ 	elapseMinute(a)
+-	if rate := a.Rate(); 0.4299187863442732 != rate {
++	if rate := a.Rate(); float64NotEqual(0.4299187863442732, rate) {
+ 		t.Errorf("5 minute a.Rate(): 0.4299187863442732 != %v\n", rate)
+ 	}
+ 	elapseMinute(a)
+-	if rate := a.Rate(); 0.4021920276213831 != rate {
++	if rate := a.Rate(); float64NotEqual(0.4021920276213831, rate) {
+ 		t.Errorf("6 minute a.Rate(): 0.4021920276213831 != %v\n", rate)
+ 	}
+ 	elapseMinute(a)
+-	if rate := a.Rate(); 0.37625345116383313 != rate {
++	if rate := a.Rate(); float64NotEqual(0.37625345116383313, rate) {
+ 		t.Errorf("7 minute a.Rate(): 0.37625345116383313 != %v\n", rate)
+ 	}
+ 	elapseMinute(a)
+-	if rate := a.Rate(); 0.3519877317060185 != rate {
++	if rate := a.Rate(); float64NotEqual(0.3519877317060185, rate) {
+ 		t.Errorf("8 minute a.Rate(): 0.3519877317060185 != %v\n", rate)
+ 	}
+ 	elapseMinute(a)
+-	if rate := a.Rate(); 0.3292869816564153165641596 != rate {
++	if rate := a.Rate(); float64NotEqual(0.3292869816564153165641596, rate) {
+ 		t.Errorf("9 minute a.Rate(): 0.3292869816564153165641596 != %v\n", rate)
+ 	}
+ 	elapseMinute(a)
+-	if rate := a.Rate(); 0.3080502714195546 != rate {
++	if rate := a.Rate(); float64NotEqual(0.3080502714195546, rate) {
+ 		t.Errorf("10 minute a.Rate(): 0.3080502714195546 != %v\n", rate)
+ 	}
+ 	elapseMinute(a)
+-	if rate := a.Rate(); 0.2881831806538789 != rate {
++	if rate := a.Rate(); float64NotEqual(0.2881831806538789, rate) {
+ 		t.Errorf("11 minute a.Rate(): 0.2881831806538789 != %v\n", rate)
+ 	}
+ 	elapseMinute(a)
+-	if rate := a.Rate(); 0.26959737847033216 != rate {
++	if rate := a.Rate(); float64NotEqual(0.26959737847033216, rate) {
+ 		t.Errorf("12 minute a.Rate(): 0.26959737847033216 != %v\n", rate)
+ 	}
+ 	elapseMinute(a)
+-	if rate := a.Rate(); 0.2522102307052083 != rate {
++	if rate := a.Rate(); float64NotEqual(0.2522102307052083, rate) {
+ 		t.Errorf("13 minute a.Rate(): 0.2522102307052083 != %v\n", rate)
+ 	}
+ 	elapseMinute(a)
+-	if rate := a.Rate(); 0.23594443252115815 != rate {
++	if rate := a.Rate(); float64NotEqual(0.23594443252115815, rate) {
+ 		t.Errorf("14 minute a.Rate(): 0.23594443252115815 != %v\n", rate)
+ 	}
+ 	elapseMinute(a)
+-	if rate := a.Rate(); 0.2207276647028646247028654470286553 != rate {
++	if rate := a.Rate(); float64NotEqual(0.2207276647028646247028654470286553, rate) {
+ 		t.Errorf("15 minute a.Rate(): 0.2207276647028646247028654470286553 != %v\n", rate)
+ 	}
+ }
+--- a/histogram_test.go
++++ b/histogram_test.go
+@@ -76,20 +76,20 @@
+ 	if max := h.Max(); 10000 != max {
+ 		t.Errorf("h.Max(): 10000 != %v\n", max)
+ 	}
+-	if mean := h.Mean(); 5000.5 != mean {
++	if mean := h.Mean(); float64NotEqual(5000.5, mean) {
+ 		t.Errorf("h.Mean(): 5000.5 != %v\n", mean)
+ 	}
+-	if stdDev := h.StdDev(); 2886.751331514372 != stdDev {
++	if stdDev := h.StdDev(); float64NotEqual(2886.751331514372, stdDev) {
+ 		t.Errorf("h.StdDev(): 2886.751331514372 != %v\n", stdDev)
+ 	}
+ 	ps := h.Percentiles([]float64{0.5, 0.75, 0.99})
+-	if 5000.5 != ps[0] {
++	if float64NotEqual(5000.5, ps[0]) {
+ 		t.Errorf("median: 5000.5 != %v\n", ps[0])
+ 	}
+-	if 7500.75 != ps[1] {
++	if float64NotEqual(7500.75, ps[1]) {
+ 		t.Errorf("75th percentile: 7500.75 != %v\n", ps[1])
+ 	}
+-	if 9900.99 != ps[2] {
++	if float64NotEqual(9900.99, ps[2]) {
+ 		t.Errorf("99th percentile: 9900.99 != %v\n", ps[2])
+ 	}
+ }
+--- a/sample_test.go
++++ b/sample_test.go
+@@ -1,12 +1,21 @@
+ package metrics
+
+ import (
++	"math"
+ 	"math/rand"
+ 	"runtime"
+ 	"testing"
+ 	"time"
+ )
+
++func float64NotEqual(a, b float64) bool {
++	v := math.Abs(a - b)
++	if b == 0.0 && v > 0.00001 {
++		return false
++	}
++	return math.Abs(v/b) > 0.00001
++}
++
+ // Benchmark{Compute,Copy}{1000,1000000} demonstrate that, even for relatively
+ // expensive computations like Variance, the cost of copying the Sample, as
+ // approximated by a make and copy, is much greater than the cost of the
+@@ -285,20 +336,20 @@
+ 	if max := s.Max(); 10000 != max {
+ 		t.Errorf("s.Max(): 10000 != %v\n", max)
+ 	}
+-	if mean := s.Mean(); 4965.98 != mean {
++	if mean := s.Mean(); float64NotEqual(4965.98, mean) {
+ 		t.Errorf("s.Mean(): 4965.98 != %v\n", mean)
+ 	}
+-	if stdDev := s.StdDev(); 2959.825156930727 != stdDev {
++	if stdDev := s.StdDev(); float64NotEqual(2959.825156930727, stdDev) {
+ 		t.Errorf("s.StdDev(): 2959.825156930727 != %v\n", stdDev)
+ 	}
+ 	ps := s.Percentiles([]float64{0.5, 0.75, 0.99})
+-	if 4615 != ps[0] {
++	if float64NotEqual(4615, ps[0]) {
+ 		t.Errorf("median: 4615 != %v\n", ps[0])
+ 	}
+-	if 7672 != ps[1] {
++	if float64NotEqual(7672, ps[1]) {
+ 		t.Errorf("75th percentile: 7672 != %v\n", ps[1])
+ 	}
+-	if 9998.99 != ps[2] {
++	if float64NotEqual(9998.99, ps[2]) {
+ 		t.Errorf("99th percentile: 9998.99 != %v\n", ps[2])
+ 	}
+ }
+@@ -313,20 +364,20 @@
+ 	if max := s.Max(); 9989 != max {
+ 		t.Errorf("s.Max(): 9989 != %v\n", max)
+ 	}
+-	if mean := s.Mean(); 4748.14 != mean {
++	if mean := s.Mean(); float64NotEqual(4748.14, mean) {
+ 		t.Errorf("s.Mean(): 4748.14 != %v\n", mean)
+ 	}
+-	if stdDev := s.StdDev(); 2826.684117548333 != stdDev {
++	if stdDev := s.StdDev(); float64NotEqual(2826.684117548333, stdDev) {
+ 		t.Errorf("s.StdDev(): 2826.684117548333 != %v\n", stdDev)
+ 	}
+ 	ps := s.Percentiles([]float64{0.5, 0.75, 0.99})
+-	if 4599 != ps[0] {
++	if float64NotEqual(4599, ps[0]) {
+ 		t.Errorf("median: 4599 != %v\n", ps[0])
+ 	}
+-	if 7380.5 != ps[1] {
++	if float64NotEqual(7380.5, ps[1]) {
+ 		t.Errorf("75th percentile: 7380.5 != %v\n", ps[1])
+ 	}
+-	if 9986.429999999998 != ps[2] {
++	if float64NotEqual(9986.429999999998, ps[2]) {
+ 		t.Errorf("99th percentile: 9986.429999999998 != %v\n", ps[2])
+ 	}
+ }
+--- a/timer_test.go
++++ b/timer_test.go
+@@ -27,7 +27,7 @@
+ 	tm := NewTimer()
+ 	tm.Update(math.MaxInt64)
+ 	tm.Update(0)
+-	if stdDev := tm.StdDev(); 4.611686018427388e+18 != stdDev {
++	if stdDev := tm.StdDev(); float64NotEqual(4.611686018427388e+18, stdDev) {
+ 		t.Errorf("tm.StdDev(): 4.611686018427388e+18 != %v\n", stdDev)
+ 	}
+ }
